@@ -33,9 +33,8 @@ tablelist         : no
 footnotelist      : no
 lineno            : yes
 
-lang              : "english"
 class             : "man"
-output            : papaja::apa6_pdf
+output            : papaja::apa6_docx
 csl               : apa6.csl
 replace_ampersands: yes
 ---
@@ -328,7 +327,8 @@ tableprint[, 6] = apa(c(faketable$logLik, realtable$logLik), 2)
 tableprint[, 7] = apa(c(faketable$L.Ratio, realtable$L.Ratio), 2)
 tableprint[, 8] = printnum(c(faketable$p, realtable$p), gt1 = FALSE, zero = FALSE, digits = 3)
 
-apa_table.latex(as.data.frame(tableprint), 
+apa_table(as.data.frame(tableprint), 
+          format = "latex",
           align = c("l", rep("c", 7)), 
           caption = "Multilevel model statistic information for pseudo and real words",
           note = "AIC: Aikaike Information Criterion, BIC: Bayesian Information Criterion", 
