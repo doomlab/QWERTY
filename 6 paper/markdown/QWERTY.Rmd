@@ -158,6 +158,8 @@ Rating data were screened for multivariate outliers, and two participant's ratin
 
 ## Materials
 
+FIX THE NUMBER OF WORDS AND SHIT HERE - FIGURE OUT WHERE THEY ARE FROM 
+
 The English ANEW [@Bradley1999] norms were used to create the stimuli for this study, in an effort to replicate @Jasmin2012 experiments, and `r length(table(exp1data$trialcode))` words were selected for this experiment. Pseudowords were selected from Appendix E of the supplementary materials presented from the QWERTY publication. These words were coded as described below for RSA, finger and hand switches, word length, and letter frequency. Average word length was `r apa(mean(exp1data$length), 2)` (*SD* = `r apa(sd(exp1data$length), 2)`; range = `r min(exp1data$length)` - `r max(exp1data$length)`). All materials, data, and the *R*markdown document that created this manuscript are available at our Open Science Foundation (OSF) page: https://osf.io/zs2qj/. 
 
 ## Coding
