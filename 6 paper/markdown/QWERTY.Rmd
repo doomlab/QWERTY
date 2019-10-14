@@ -333,7 +333,7 @@ apa_table(as.data.frame(tableprint),
           format = "latex",
           align = c("l", rep("c", 7)), 
           caption = "Multilevel model statistic information for pseudo and real words",
-          note = "AIC: Aikaike Information Criterion, BIC: Bayesian Information Criterion", 
+          note = "AIC: Akaike Information Criterion, BIC: Bayesian Information Criterion", 
           escape = FALSE,
           col.names = c("Word Type", "Model", "$df$", "AIC", "BIC", "$\\chi^2$", "$\\Delta\\chi^2$", "$p$"))
 
