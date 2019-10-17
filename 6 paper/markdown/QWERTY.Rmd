@@ -75,6 +75,44 @@ These effects lead @Jasmin2012 to propose the idea that typing, an action that o
 
 The current study examined the right side advantage's interaction with traditional embodied cognition definitions (expertise, fluency). We analyzed the different implications of the body specificity hypothesis and a more general embodied hypothesis by testing the following: 
 
+## replication first and do the same analysis they did originally (participants + databases) body specificity hypothesis 
+
+- they did this: Materials and procedure We analyzed valence-normed words
+from three corpora (see Appendix A in the Supplementary
+online materials): the Affective Norms for English Words corpus
+(ANEW; Bradley & Lang, 1999), and two translation
+equivalents of ANEW in Spanish (SPANEW; Redondo,
+Fraga, Padrón, & Comesaña, 2007) and Dutch (DANEW).
+
+RSA remained a significant predictor of valence when word
+length, letter frequency, language, and their interactions were
+controlled [b 0 .057, Wald χ2(1) 0 6.95, p 0 .008]. (word length, letter frequency, and RSA since we aren't doing language).
+
+In Experiment 2, we tested the QWERTY effect in a larger
+corpus of English words (AFINN; Nielsen, 2012), which
+included neologisms coined after the invention of
+QWERTY. 
+
+experiment 3 is the pseudowords - we used these for our pseudowords
+
+does talk about dodds here http://casasanto.com/QWERTY.html (so add warriner)
+
+## extend the study - adding in expertise (main effect plus other variables: hand and finger switching)
+
+they tossed this shit in the discussion with no evidence for it 
+
+In exploratory analyses, we found no
+significant relationship between the number of finger repetitions
+in a word and its valence, nor was there any relationship
+between valence and the number of hand alternations used
+when typing a word—for any of the corpora we analyzed.
+These other sources of typing fluency are orthogonal to the
+number of right-side and left-side letters in a word, and the
+effects we report here remain significant when both finger
+repetition and hand alternation are controlled.
+
+## explore for an interaction between these two hypotheses 
+
   1) Expertise was measured through participant typing speed, and fluency or typeability was measured through finger and hand switches that would occur if the word was typed on a QWERTY keyboard (akin to @Beilock2007's different hand preferences). Given that typing involves the procedural action system, we would expect to find that increased hand and finger switches are positively related to ratings of valence because words that are typed on alternating fingers and hands are easier to type; thus, supporting embodied cognition theories. It was unclear if expertise would directly influence overall ratings, as we expected an interaction of the variables (described below). The RSA may still be present when accounting for these variables, as humans are primarily a right side dominant species, and this result would support the body specificity hypothesis.
   2) The interaction between RSA, hand and fingers switches, and expertise was examined to determine if embodied cognition and body specificity hypotheses can be combined. This analysis allowed us to explore the nuance of skill and typeability on valence ratings and to determine the effects of the RSA at different levels these variables. 
 
