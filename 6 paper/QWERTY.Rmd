@@ -8,21 +8,28 @@ author:
     corresponding : yes    # Define only one corresponding author
     address       : "326 Market St., Harrisburg, PA 17101"
     email         : "ebuchanan@harrisburgu.edu"
-  - name          : "Kathrene D. Valentine"
+  - name          : "K. D. Valentine"
     affiliation   : "2"
   - name          : "Addie Wikowsky"
     affiliation   : "3"
 
 affiliation:
   - id            : "1"
-    institution   : "Missouri State University"
+    institution   : "Harrisburg Univeristy of Science and Technology"
   - id            : "2"
     institution   : "Massachusetts General Hospital"
   - id            : "3"
-    institution   : "Clinvest Research, LLC"
+    institution   : "Clinvest Research LLC"
 
 author_note: |
   Erin M. Buchanan is an Professor of Cognitive Analytics at Harrisburg University of Science and Technology. K. D. Valentine is a post doctoral researcher at Massachusetts General Hospital. Addie Wikowsky is a researcher at Clinvest Research, LLC. We would like to thank previous anonymous reviewers for their comments on this manuscript. 
+  Addresses: 
+    Erin M. Buchanan: Harrisburg Univeristy of Science and Technology, Analytics, Harrisburg, PA, USA, ebuchanan@harrisburgu.edu, 326 Market St., Harrisburg, PA 17101
+    K.D. Valentine: Massachusetts General Hospital, Division of General Medicine, Boston, MA, USA
+    Addie Wikowsky: Clinvest Research LLC, Springfield, MO, USA
+  Funding: We have no funding sources to report.
+  COIs: We have conflicts of interest to report. 
+  Ethics: All studies were approved by the IRB at Missouri State University (all author's previous institution). 
   
 abstract: |
   Typing is a ubiquitous daily action for many individuals; yet, research on how these actions have changed our perception of language is limited. One such influence, deemed the QWERTY effect, is an increase in valence ratings for words typed more with the right hand on a traditional keyboard [@Jasmin2012]. Although this finding is intuitively appealing given both right handed dominance and the smaller number of letters typed with the right hand, extension and replication of the right-side advantage is warranted. The present paper reexamined the QWERTY effect within the embodied cognition framework [@Barsalou1999] and found that the right-side advantage is replicable to new valence stimuli, along with findings supporting embodied cognition. Further, when examining expertise, right-side advantage interacted with typing speed and typeability (i.e., alternating hand key presses or finger switches) portraying that both skill and our procedural actions play a role in judgment of valence on words.
@@ -42,7 +49,7 @@ draft             : no
 classoption       : "man"
 csl               : "apa.csl"
 documentclass     : "apa7"
-output            : papaja::apa6_pdf
+output            : papaja::apa6_docx
 ---
 
 ```{r load_packages, include = FALSE}
@@ -620,6 +627,3 @@ This extension of the QWERTY effect illuminates the need to examine how skill an
 
 # References
 
-
-\setlength{\parindent}{-0.5in}
-\setlength{\leftskip}{0.5in}
