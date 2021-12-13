@@ -1,0 +1,768 @@
+---
+title: "Supplemental Analyses for QWERTY"
+author: "Anonymous for Review"
+date: "Last Knitted: `r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+## Libraries
+
+```{r load_packages}
+knitr::opts_chunk$set(cache = TRUE)
+library("papaja")
+library(nlme)
+library(MOTE)
+library(ggplot2)
+cleanup = theme(panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank(), 
+                panel.background = element_blank(), 
+                axis.line.x = element_line(color = "black"),
+                axis.line.y = element_line(color = "black"),
+                legend.key = element_rect(fill = "white"),
+                text = element_text(size = 15))
+library(cowplot)
+```
+
+## Load Files 
+
+```{r datascreen1}
+####import files####
+exp1data = read.csv("exp12_final.csv", stringsAsFactors = T)
+
+####data screening####
+##accuracy checks
+summary(exp1data)
+part = length(table(exp1data$partno))
+#table(exp1data$speed)
+#hist(exp1data$speed)
+exp1data$real_fake = factor(exp1data$real_fake,
+                            levels = c("fake", "real"))
+
+##missing data
+##no missing data to replace
+##figure out the couple missing data points
+rows = nrow(exp1data)
+parttable = as.data.frame(table(exp1data$partno))
+#parttable[parttable$Freq > 120, ]
+missdatapoints = nrow(parttable[parttable$Freq < 120, ])
+missdatapoints119 = nrow(parttable[parttable$Freq == 119, ])
+
+##outliers
+#with(exp1data, plot(speed, rating))
+mahal = mahalanobis(exp1data[ , c(5,7)],
+                    colMeans(exp1data[ , c(5,7)], na.rm = T),
+                    cov(exp1data[ , c(5,7)], use = "pairwise.complete.obs"))
+cutoff = qchisq(1-.001, ncol(exp1data[ , c(5,7)]))
+table(mahal < cutoff)
+exp1data$partno[ mahal > cutoff] ##two participants
+
+##assumptions
+correlations = cor(exp1data[, c(5,7, 13, 14, 15, 16, 17)], use="pairwise.complete.obs")
+correlations
+symnum(correlations)
+#do not use length and fingerswitch together 
+
+##make the random stuff
+random = rchisq(nrow(exp1data), 7)
+#fake = lm(random~., data=exp1data[ , c(5, 7, 12, 13, 14, 15, 17)])
+fake = lm(random~., data=exp1data[ , c(5, 7)])
+
+##get the linearity plot
+##create the standardized residuals
+standardized = rstudent(fake)
+{qqnorm(standardized)
+abline(0,1)}
+
+##multivariate normality
+hist(standardized, breaks=15)
+
+##homogeneity and homoscedaticity
+fitvalues = scale(fake$fitted.values)
+{plot(fitvalues, standardized) 
+abline(0,0)
+abline(v = 0)}
+
+exp1data$hand[exp1data$hand == 0] = NA
+exp1data$hand[exp1data$hand == "the"] = NA
+exp1data$hand[exp1data$hand == "left"] = "Left"
+exp1data$hand[exp1data$hand == "right"] = "Right"
+exp1data$hand[exp1data$hand == "RIGHT"] = "Right"
+exp1data$hand = droplevels(exp1data$hand)
+
+temp = exp1data[!duplicated(exp1data$partno), ]
+hand = table(temp$hand) / length(temp$hand) * 100
+
+```
+
+## Analysis Set Up
+
+```{r setupexp1}
+####separate real fake####
+real = subset(exp1data,real_fake == "real")
+fake = subset(exp1data,real_fake == "fake")
+
+####centering the variables####
+real$speed = scale(real$speed, scale = FALSE)
+real$lrswitch = scale(real$lrswitch, scale = FALSE)
+real$fingerswitch = scale(real$fingerswitch, scale = FALSE)
+real$rha = scale(real$rha, scale =FALSE)
+
+fake$speed = scale(fake$speed, scale = FALSE)
+fake$lrswitch = scale(fake$lrswitch, scale = FALSE)
+fake$fingerswitch = scale(fake$fingerswitch, scale = FALSE)
+fake$rha = scale(fake$rha, scale = FALSE)
+```
+
+## Main Effects
+
+```{r meexp1}
+ ####intercept only model####
+model1f = gls(rating ~ 1, 
+             data = fake, 
+             method = "ML", 
+             na.action = "na.omit")
+summary(model1f)
+
+model1r = gls(rating ~ 1, 
+             data = real, 
+             method = "ML", 
+             na.action = "na.omit")
+summary(model1r)
+
+####random intercept only model####
+model2f = lme(rating ~ 1, 
+             data = fake, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model2f)
+
+model2r = lme(rating ~ 1, 
+             data = real, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model2r)
+
+
+####controls predictor models####
+model3f = lme(rating ~ letterfreq, 
+              data = fake, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+summary(model3f)
+
+model3r = lme(rating ~ letterfreq, 
+             data = real, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model3r)
+
+####main effects models####
+model4f = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = fake, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4f)
+
+model4r = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = real, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4r)
+```
+
+## Interactions
+
+```{r model-table1, results='asis'}
+####interaction models####
+model5f = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*rha, 
+             data = fake, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+#summary(model5f)
+
+model5r = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*rha, 
+             data = real, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+#summary(model5r)
+
+##make the excel sheet
+excelprint = matrix(NA, nrow = 54, ncol = 8)
+colnames(excelprint) = c("Word Type", "Model", "Predictor", "Estimate", "SE","df", "t", "p")
+
+excelprint[1, 1:3] = c("Psuedo", "Intercept Only",  rownames(summary(model1f)$tTable))
+excelprint[1, 4:8] = c(summary(model1f)$tTable[1:2], 32541, summary(model1f)$tTable[3:4])
+excelprint[2, 1:3] = c("Psuedo", "Random Intercept",  rownames(summary(model2f)$tTable))
+excelprint[2, 4:8] = summary(model2f)$tTable
+excelprint[3, 1:3] = c("Psuedo", "Adjustor Variable",  rownames(summary(model3f)$tTable)[1])
+excelprint[4, 1:3] = c("Psuedo", "Adjustor Variable",  rownames(summary(model3f)$tTable)[2])
+excelprint[3:4, 4:8] = summary(model3f)$tTable
+excelprint[5:10 , 1] = c("Psuedo")
+excelprint[5:10 , 2] = c("Main Effects")
+excelprint[5:10, 3] = rownames(summary(model4f)$tTable)
+excelprint[5:10, 4:8] = summary(model4f)$tTable
+excelprint[11:27, 1] = c("Psuedo")
+excelprint[11:27, 2] = c("Interactions")
+excelprint[11:27, 3] = rownames(summary(model5f)$tTable)
+excelprint[11:27, 4:8] = summary(model5f)$tTable
+
+excelprint[28, 1:3] = c("Real", "Intercept Only",  rownames(summary(model1r)$tTable))
+excelprint[28, 4:8] = c(summary(model1r)$tTable[1:2], 32690, summary(model1r)$tTable[3:4])
+excelprint[29, 1:3] = c("Real", "Random Intercept",  rownames(summary(model2r)$tTable))
+excelprint[29, 4:8] = summary(model2r)$tTable
+excelprint[30, 1:3] = c("Real", "Adjustor Variable",  rownames(summary(model3r)$tTable)[1])
+excelprint[31, 1:3] = c("Real", "Adjustor Variable",  rownames(summary(model3r)$tTable)[2])
+excelprint[30:31, 4:8] = summary(model3r)$tTable
+excelprint[32:37 , 1] = c("Real")
+excelprint[32:37 , 2] = c("Main Effects")
+excelprint[32:37, 3] = rownames(summary(model4r)$tTable)
+excelprint[32:37, 4:8] = summary(model4r)$tTable
+excelprint[38:54, 1] = c("Real")
+excelprint[38:54, 2] = c("Interactions")
+excelprint[38:54, 3] = rownames(summary(model5r)$tTable)
+excelprint[38:54, 4:8] = summary(model5r)$tTable
+
+write.csv(excelprint, "Predictor Statistics Exp 1.csv", row.names = FALSE)
+
+##make the printed table
+faketable = anova(model1f, model2f, model3f, model4f, model5f)
+realtable = anova(model1r, model2r, model3r, model4r, model5r)
+
+tableprint = matrix(NA, nrow = 10, ncol = 8)
+tableprint[1:5, 1] = "Pseudo"
+tableprint[6:10, 1] = "Real"
+tableprint[, 2] = c("Intercept Only", "Random Intercept", "Adjustor Variable", "Main Effects", "Interactions")
+tableprint[, 3] = c(faketable$df, realtable$df)
+tableprint[, 4] = apa(c(faketable$AIC, realtable$AIC), 2)
+tableprint[, 5] = apa(c(faketable$BIC, realtable$BIC), 2)
+tableprint[, 6] = apa(c(faketable$logLik, realtable$logLik), 2)
+tableprint[, 7] = apa(c(faketable$L.Ratio, realtable$L.Ratio), 2)
+tableprint[, 8] = printnum(c(faketable$p, realtable$p), gt1 = FALSE, zero = FALSE, digits = 3)
+
+apa_table(as.data.frame(tableprint), 
+          align = c("l", rep("c", 7)), 
+          caption = "Multilevel model statistic information for pseudo and real words",
+          note = "AIC: Aikaike Information Criterion, BIC: Bayesian Information Criterion", 
+          escape = FALSE,
+          col.names = c("Word Type", "Model", "$df$", "AIC", "BIC", "$\\chi^2$", "$\\Delta\\chi^2$", "$p$"))
+
+```
+
+### Break Down Interaction
+
+```{r interactions1}
+####fake words rsa by speed and rsa by fingerswitch####
+##create simple groups
+fake$lowrha = fake$rha + sd(fake$rha)
+fake$highrha = fake$rha - sd(fake$rha)
+
+model5fl = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*lowrha, 
+              data = fake, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+
+model5fh = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*highrha, 
+              data = fake, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+
+#summary(model5fl)
+#summary(model5f)
+#summary(model5fh)
+##speed is 3 fingerswitch is 5
+
+####real words, finger by hand by rsa and finger by hand by speed####
+##break down by finger then hand
+real$lowfingerswitch = real$fingerswitch + sd(real$fingerswitch)
+real$highfingerswitch = real$fingerswitch - sd(real$fingerswitch)
+
+model5rl = lme(rating ~ letterfreq + speed*lrswitch*lowfingerswitch*rha, 
+              data = real, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+model5rh = lme(rating ~ letterfreq + speed*lrswitch*highfingerswitch*rha, 
+              data = real, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+
+#summary(model5rl)
+#summary(model5r)
+#summary(model5rh)
+
+##hand by rsa is 11, hand by speed is 7
+##low hand by rsa is sig, speed by hand is not
+##avg hand by rsa is not, speed by hand is not
+##high hand by rsa is sig, speed by hand is sig
+
+##break down by hand for low and high, give average scores as what they are
+real$lowlrswitch = real$lrswitch + sd(real$lrswitch)
+real$highlrswitch = real$lrswitch - sd(real$lrswitch)
+
+##low finger switch
+model5rll = lme(rating ~ letterfreq + speed*lowlrswitch*lowfingerswitch*rha, 
+              data = real, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+
+model5rlh = lme(rating ~ letterfreq + speed*highlrswitch*lowfingerswitch*rha, 
+              data = real, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+
+#summary(model5rll)
+#summary(model5rl)
+#summary(model5rlh)
+
+##high finger switch
+model5rhl = lme(rating ~ letterfreq + speed*lowlrswitch*highfingerswitch*rha, 
+              data = real, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+model5rhh = lme(rating ~ letterfreq + speed*highlrswitch*highfingerswitch*rha, 
+              data = real, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+
+#summary(model5rhl)
+#summary(model5rh)
+#summary(model5rhh)
+```
+
+```{r int-excel}
+excelprint = matrix(NA, nrow = 170, ncol = 8)
+colnames(excelprint) = c("Word Type", "Model", "Predictor", "Estimate", "SE","df", "t", "p")
+
+excelprint[1:17, 1] = c("Psuedo")
+excelprint[1:17, 2] = c("Low RSA")
+excelprint[1:17, 3] = c(rownames(summary(model5fl)$tTable))
+excelprint[1:17, 4:8] = summary(model5fl)$tTable
+
+excelprint[18:34, 1] = c("Psuedo")
+excelprint[18:34, 2] = c("Average RSA")
+excelprint[18:34, 3] = c(rownames(summary(model5f)$tTable))
+excelprint[18:34, 4:8] = summary(model5f)$tTable
+
+excelprint[35:51, 1] = c("Psuedo")
+excelprint[35:51, 2] = c("High RSA")
+excelprint[35:51, 3] = c(rownames(summary(model5fh)$tTable))
+excelprint[35:51, 4:8] = summary(model5fh)$tTable
+
+excelprint[52:68, 1] = c("Real")
+excelprint[52:68, 2] = c("Low Finger Switch")
+excelprint[52:68, 3] = c(rownames(summary(model5rl)$tTable))
+excelprint[52:68, 4:8] = summary(model5rl)$tTable
+
+excelprint[69:85, 1] = c("Real")
+excelprint[69:85, 2] = c("Average Finger Switch")
+excelprint[69:85, 3] = c(rownames(summary(model5r)$tTable))
+excelprint[69:85, 4:8] = summary(model5r)$tTable
+
+excelprint[86:102, 1] = c("Real")
+excelprint[86:102, 2] = c("High Finger Switch")
+excelprint[86:102, 3] = c(rownames(summary(model5rh)$tTable))
+excelprint[86:102, 4:8] = summary(model5rh)$tTable
+
+excelprint[103:119, 1] = c("Real")
+excelprint[103:119, 2] = c("Low Finger Switch, Low Hand Switch")
+excelprint[103:119, 3] = c(rownames(summary(model5rll)$tTable))
+excelprint[103:119, 4:8] = summary(model5rll)$tTable
+
+excelprint[120:136, 1] = c("Real")
+excelprint[120:136, 2] = c("Low Finger Switch, High Hand Switch")
+excelprint[120:136, 3] = c(rownames(summary(model5rlh)$tTable))
+excelprint[120:136, 4:8] = summary(model5rlh)$tTable
+
+excelprint[137:153, 1] = c("Real")
+excelprint[137:153, 2] = c("High Finger Switch, Low Hand Switch")
+excelprint[137:153, 3] = c(rownames(summary(model5rhl)$tTable))
+excelprint[137:153, 4:8] = summary(model5rhl)$tTable
+
+excelprint[154:170, 1] = c("Real")
+excelprint[154:170, 2] = c("High Finger Switch, High Hand Switch")
+excelprint[154:170, 3] = c(rownames(summary(model5rhh)$tTable))
+excelprint[154:170, 4:8] = summary(model5rhh)$tTable
+
+write.csv(excelprint, "Interaction Statistics Exp 1.csv", row.names = FALSE)
+
+```
+
+```{r graphs, echo=FALSE,  fig.cap = "Simple slopes for pseudowords interaction effects. The left plot indicates the speed interaction across simple slopes of RSA, while the right plot indicates the interaction of finger switches and RSA. Speed has positive effects when RSA is low (left handed words), while finger switches have negative effects when RSA is low.", fig.height=5, fig.width=8}
+
+##plot these together
+##make pseudoword (fake) plot for speed (speed) X, valence (rating) Y, simple slopes is RSA (rha)
+
+plot1 = ggplot(fake, aes(as.numeric(speed), rating)) +
+  labs(x = "Centered Typing Speed", y = "Valence") +
+  scale_size_continuous(guide = FALSE) +
+  geom_abline(aes(intercept = 4.115, slope = 0.005, linetype = "-1SD RSA")) +
+  geom_abline(aes(intercept = 4.227, slope = 0.003, linetype = "Average RSA")) +
+  geom_abline(aes(intercept = 4.340, slope = 0.001, linetype = "+1SD RSA")) +
+  scale_linetype_manual(values = c("dotted", "dashed", "solid"),
+                        breaks = c("-1SD RSA", "Average RSA", "+1SD RSA"),
+                        name = "Simple Slope") +
+  coord_cartesian(xlim = c(-40, 51), ylim = c(1,9)) +
+  geom_vline(xintercept = -45) +
+  geom_hline(yintercept = 0) +
+  cleanup 
+
+##make pseudoword  plot for finger switching (fingerswitch) X, valence Y, simple slopes is RSA
+plot2 = ggplot(fake, aes(as.numeric(fingerswitch), rating)) +
+  labs(x = "Centered Finger Switches", y = "Valence") +
+  scale_size_continuous(guide = FALSE) +
+  geom_abline(aes(intercept = 4.115, slope = -0.095, linetype = "-1SD RSA")) + 
+  geom_abline(aes(intercept = 4.227, slope = -0.062, linetype = "Average RSA")) +
+  geom_abline(aes(intercept = 4.340, slope = -0.029, linetype = "+1SD RSA")) +
+  scale_linetype_manual(values = c("dotted", "dashed", "solid"),
+                        breaks = c("-1SD RSA", "Average RSA", "+1SD RSA"),
+                        name = "Simple Slope") +
+  coord_cartesian(xlim = c(-3,3), ylim = c(1,9)) +
+  geom_vline(xintercept = -4) +
+  geom_hline(yintercept = 0) +
+  cleanup 
+
+# arrange plots together
+plot_grid( plot1 + theme(legend.position="none"),
+           plot2 + theme(legend.position=c(.5,.8)),
+           hjust = -1,
+           nrow = 1)
+```
+
+```{r graphs2, echo=FALSE, fig.cap = "Simple Slopes for real word interactions of finger switchings by RSA by hand switches and finger switches by speed by hand switches. The top left figure indicates the interaction for RSA and hand switches at low finger switches. The average level of finger switches did not show an interaction. The top right panel portrays the interaction of RSA and hand switches at high simple slopes for finger switches. The bottom left figure shows the interaction of typing speed and hand switches at high finger switches. Low and average finger switches did not show this interaciton. ", fig.height=8, fig.width=8}
+
+##make real words high finger switches, RSA X, valence Y, simple slopes are handswitches
+plot3 = ggplot(real, aes(as.numeric(rha), rating)) +
+  labs(x = "Centered RSA", y = "Valence") +
+  scale_size_continuous(guide = FALSE) +
+  geom_abline(aes(intercept = 4.820, slope = 0.035, linetype = "-1SD Hand Switches")) + 
+  geom_abline(aes(intercept = 4.863, slope = 0.055, linetype = "Average Hand Switches")) +
+  geom_abline(aes(intercept = 4.906, slope = 0.074, linetype = "+1SD Hand Switches")) +
+  scale_linetype_manual(values = c("dotted", "dashed", "solid"),
+                        breaks = c("-1SD Hand Switches", "Average Hand Switches", "+1SD Hand Switches"),
+                        name = "Simple Slope") +
+  coord_cartesian(xlim = c(-9, 8), ylim = c(1,9)) +
+  geom_vline(xintercept = -10) +
+  geom_hline(yintercept = 0) +
+  cleanup + 
+  labs(title="Low Centered Finger Switches") 
+
+##make real words high finger switches, RSA X, valence Y, simple slopes are handswitches
+plot4 = ggplot(real, aes(as.numeric(rha), rating)) +
+  labs(x = "Centered RSA", y = "Valence") +
+  scale_size_continuous(guide = FALSE) +
+  geom_abline(aes(intercept = 4.476, slope = 0.101, linetype = "-1SD Hand Switches")) + #done
+  geom_abline(aes(intercept = 4.553, slope = 0.074, linetype = "Average Hand Switches")) +
+  geom_abline(aes(intercept = 4.629, slope = 0.048, linetype = "+1SD Hand Switches")) +
+  scale_linetype_manual(values = c("dotted", "dashed", "solid"),
+                        breaks = c("-1SD Hand Switches", "Average Hand Switches", "+1SD Hand Switches"),
+                        name = "Simple Slope") +
+  coord_cartesian(xlim = c(-9, 8), ylim = c(1,9)) +
+  geom_vline(xintercept = -10) +
+  geom_hline(yintercept = 0) +
+  cleanup + 
+  labs(title="High Centered Finger Switches") 
+
+##make real words high finger switches, speed X, valence Y, simple slopes are handswitches
+plot5 = ggplot(real, aes(as.numeric(speed), rating)) +
+  labs(x = "Centered Typing Speed", y = "Valence") +
+  scale_size_continuous(guide = FALSE) +
+  geom_abline(aes(intercept = 4.476, slope = 0.010, linetype = "-1SD Hand Switches")) + #done
+  geom_abline(aes(intercept = 4.553, slope = 0.006, linetype = "Average Hand Switches")) +
+  geom_abline(aes(intercept = 4.629, slope = 0.002, linetype = "+1SD Hand Switches")) +
+  scale_linetype_manual(values = c("dotted", "dashed", "solid"),
+                        breaks = c("-1SD Hand Switches", "Average Hand Switches", "+1SD Hand Switches"),
+                        name = "Simple Slope") +
+  coord_cartesian(xlim = c(-40, 51), ylim = c(1,9)) +
+  geom_vline(xintercept = -45) +
+  geom_hline(yintercept = 0) +
+  cleanup + 
+  labs(title="High Centered Finger Switches") 
+
+# arrange plots together
+legend2 = get_legend(plot3)
+plot_grid( plot3 + theme(legend.position="none"),
+           plot4 + theme(legend.position="none"),
+           plot5 + theme(legend.position="none"),
+           legend2,
+           hjust = -1,
+           nrow = 2)
+
+```
+
+## Supplemental  Analyses 
+
+### Handedness Control 
+
+```{r}
+fake2 <- subset(fake, hand != "right_left")
+fake2$hand <- droplevels(fake2$hand)
+
+real2 <- subset(real, hand != "right_left")
+real2$hand <- droplevels(real2$hand)
+
+####controls predictor models####
+model3f = lme(rating ~ letterfreq + hand, 
+              data = fake2, 
+              method = "ML", 
+              na.action = "na.omit",
+              random = ~1|partno)
+summary(model3f)
+
+model3r = lme(rating ~ letterfreq + hand, 
+             data = real2, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model3r)
+
+####main effects models####
+model4f = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha + hand, 
+             data = fake2, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4f)
+
+model4r = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha + hand, 
+             data = real2, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4r)
+
+####interaction models####
+model5f = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*rha + hand, 
+             data = fake2, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model5f)
+
+model5r = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*rha + hand, 
+             data = real2, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model5r)
+```
+
+### Power Sensitivity Analysis 
+
+```{r eval = F}
+# power sensitivity
+library(simr)
+library(lme4)
+# what is the coefficient for 80% power 
+# highest level interaction that we interpreted
+
+# fake lrswitch:fingerswitch:rha
+# 0.006750 0.00329742
+model5f = lmer(rating ~ letterfreq + 
+                 speed*lrswitch*fingerswitch*rha + 
+                 (1|partno), 
+             data = fake, 
+             na.action = "na.omit")
+summary(model5f)
+
+est_mde <- seq(from = 0.007, to = .010, by = 0.0002)
+power_x <- 1:length(est_mde)
+for (i in 1:length(est_mde)){
+  fixef(model5f)["lrswitch:fingerswitch:rha"] <- est_mde[i]
+  power_est <- powerSim(model5f, 
+           fixed("lrswitch:fingerswitch:rha", "z"), 
+           nsim = 1000)
+  power_x[i] <- power_est$x
+}
+
+power_x_df <- data.frame(power = power_x/10, estimate = est_mde)
+
+write.csv(power_x_df, "sensitivity_fake.csv", row.names = F)
+
+model5r = lmer(rating ~ letterfreq + 
+                 speed*lrswitch*fingerswitch*rha + 
+                 (1|partno), 
+             data = real, 
+             na.action = "na.omit")
+summary(model5r)
+
+est_mde_2 <- seq(from = -.007, to = -0.004, by = 0.0002)
+power_x_2 <- 1:length(est_mde_2)
+for (i in 1:length(est_mde_2)){
+  fixef(model5r)["lrswitch:fingerswitch:rha"] <- est_mde_2[i]
+  power_est <- powerSim(model5r, 
+           fixed("lrswitch:fingerswitch:rha", "z"), 
+           nsim = 1000)
+  power_x_2[i] <- power_est$x
+}
+
+power_x_df_2 <- data.frame(power = power_x_2/10, estimate = est_mde_2)
+
+write.csv(power_x_df_2, "sensitivity_real.csv", row.names = F)
+```
+
+### Controlling for Length 
+
+```{r}
+# does length matter 
+fake3 <- subset(exp1data, real_fake == "fake")
+real3 <- subset(exp1data, real_fake == "real")
+
+fake3$lrswitch <- fake3$lrswitch / fake3$length
+fake3$fingerswitch <- fake3$fingerswitch / fake3$length
+fake3$rha <- fake3$rha / fake3$length
+
+real3$lrswitch <- real3$lrswitch / real3$length
+real3$fingerswitch <- real3$fingerswitch / real3$length
+real3$rha <- real3$rha / real3$length
+
+####centering the variables####
+real3$speed = scale(real3$speed, scale = FALSE)
+real3$lrswitch = scale(real3$lrswitch, scale = FALSE)
+real3$fingerswitch = scale(real3$fingerswitch, scale = FALSE)
+real3$rha = scale(real3$rha, scale =FALSE)
+
+fake3$speed = scale(fake3$speed, scale = FALSE)
+fake3$lrswitch = scale(fake3$lrswitch, scale = FALSE)
+fake3$fingerswitch = scale(fake3$fingerswitch, scale = FALSE)
+fake3$rha = scale(fake3$rha, scale = FALSE)
+
+####main effects models####
+model4f = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = fake3, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4f)
+
+model4r = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = real3, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4r)
+
+####interaction models####
+model5f = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*rha, 
+             data = fake3, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model5f)
+
+model5r = lme(rating ~ letterfreq + speed*lrswitch*fingerswitch*rha, 
+             data = real3, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model5r)
+```
+
+### Center By Participant 
+
+```{r}
+# does centering matter 
+fake4 <- subset(exp1data, real_fake == "fake")
+real4 <- subset(exp1data, real_fake == "real")
+
+####participant centering the variables####
+# speed would not change because it's a constant
+real4$lr_mean <- ave(real4$lrswitch, real4$partno, FUN = mean)
+real4$lr_center <- real4$lrswitch - real4$lr_mean
+real4$finger_mean <- ave(real4$fingerswitch, real4$partno, FUN = mean)
+real4$finger_center <- real4$fingerswitch - real4$finger_mean
+real4$rha_mean <- ave(real4$rha, real4$partno, FUN = mean)
+real4$rha_center <- real4$rha - real4$rha_mean
+
+fake4$lr_mean <- ave(fake4$lrswitch, fake4$partno, FUN = mean)
+fake4$lr_center <- fake4$lrswitch - fake4$lr_mean
+fake4$finger_mean <- ave(fake4$fingerswitch, fake4$partno, FUN = mean)
+fake4$finger_center <- fake4$fingerswitch - fake4$finger_mean
+fake4$rha_mean <- ave(fake4$rha, fake4$partno, FUN = mean)
+fake4$rha_center <- fake4$rha - fake4$rha_mean
+
+####main effects models####
+model4f = lme(rating ~ letterfreq + speed + lr_center + finger_center + rha_center, 
+             data = fake4, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4f)
+
+model4r = lme(rating ~ letterfreq + speed + lr_center + finger_center + rha_center, 
+             data = real4, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4r)
+
+####interaction models####
+model5f = lme(rating ~ letterfreq + speed*lr_center*finger_center*rha_center, 
+             data = fake4, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model5f)
+
+model5r = lme(rating ~ letterfreq + speed*lr_center*finger_center*rha_center, 
+             data = real4, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model5r)
+```
+
+### Random Slope of RSA
+
+```{r}
+# does RSA make a random slope 
+####main effects models####
+model4f = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = fake, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4f)
+AIC(model4f)
+
+model4f.1 = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = fake, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~rha|partno)
+summary(model4f.1)
+AIC(model4f.1)
+
+model4r = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = real4, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~1|partno)
+summary(model4r)
+AIC(model4r)
+
+model4r.1 = lme(rating ~ letterfreq + speed + lrswitch + fingerswitch + rha, 
+             data = real4, 
+             method = "ML", 
+             na.action = "na.omit",
+             random = ~rha|partno)
+summary(model4r.1)
+AIC(model4r.1)
+```
